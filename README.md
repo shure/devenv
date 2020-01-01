@@ -12,3 +12,5 @@ A generic build environment.
     Build kernel objects (linux kernel tree is required).
     Each flavor will store its own package tree dependencies.
 - Debug and Release build modes are supported.
+
+To build everything, please cd to "src" directory and run "make".
