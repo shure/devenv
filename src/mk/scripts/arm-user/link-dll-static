@@ -1,0 +1,51 @@
+#!/bin/sh
+
+shared_library=$1
+shift
+linker_def_file=$1
+shift
+components=$*
+
+tool="aarch64-linux-gnu-g++"
+
+link_opts="-nodefaultlibs -Wl,-Bsymbolic,-Bstatic,-lstdc++,-lgcc,-lgcc_eh,-Bdynamic,-lpthread,-lc"
+pic_flag=-fPIC
+pthread_flag=-pthread
+if [ -n "$linker_def_file" ]; then
+   linker_def_flags="-Wl,--version-script,$linker_def_file"
+fi
+
+rm -f $shared_library > /dev/null
+if [ -f $shared_library ]; then
+    mv -f $shared_library $shared_library.old.$$~ >/dev/null
+fi
+
+cmd="$tool -shared $pic_flag $pthread_flag -o $shared_library $linker_def_flags -L$mk_bin_dir $components $link_opts"
+echo $cmd > $shared_library.cmd
+$cmd
+result=$?
+if [ $result != 0 ]; then
+    rm -f $shared_library > /dev/null
+    exit $result
+fi
+
+export LD_LIBRARY_PATH=$mk_bin_dir:$LD_LIBRARY_PATH
+ldd -r $shared_library > $shared_library.log 2>&1 > /dev/null
+
+grep symbol.not.found $shared_library.log > /dev/null
+if [ $? -ne 1 ]; then
+    rm $shared_library
+    grep symbol.not.found $shared_library.log | c++filt
+    rm $shared_library.log > /dev/null
+    exit 1
+fi
+
+grep undefined.symbol $shared_library.log > /dev/null
+if [ $? -ne 1 ]; then
+    rm $shared_library
+    grep undefined.symbol $shared_library.log | c++filt
+    rm $shared_library.log > /dev/null
+    exit 1
+fi
+
+rm $shared_library.log > /dev/null

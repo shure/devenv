@@ -1,0 +1,14 @@
+#!/bin/sh
+
+script_dir=$(dirname $(readlink -f $0))
+linux_tree=$(readlink -f $script_dir/../../../../../build/kernel/linux-xlnx)
+
+tool="aarch64-none-elf-gcc"
+tool_dir=$(dirname $(which $tool))
+gcc_version=$($tool -dumpversion)
+isystem_dir=$tool_dir/../lib/gcc/aarch64-none-elf/$gcc_version/include
+
+kernel_flags="-nostdinc -isystem $tool_dir/../lib/gcc/aarch64-none-elf/$gcc_version/include -I$linux_tree/arch/arm64/include -I$linux_tree/arch/arm64/include/generated/uapi -I$linux_tree/arch/arm64/include/generated  -I$linux_tree/include -I$linux_tree/arch/arm64/include/uapi -I$linux_tree/arch/arm64/include/generated/uapi -I$linux_tree/include/uapi -I$linux_tree/include/generated/uapi -include $linux_tree/include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -std=gnu89 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-asynchronous-unwind-tables -fno-delete-null-pointer-checks -O2 --param=allow-store-data-races=0 -Wframe-larger-than=2048 -fno-stack-protector -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -DCC_HAVE_ASM_GOTO  -DMODULE -mcmodel=large"
+
+$tool $kernel_flags $*
+

@@ -1,0 +1,24 @@
+#!/bin/sh
+
+script_dir=$(dirname $(readlink -f $0))
+linux_tree=$(readlink -f $script_dir/../../../../../build/kernel/linux-xlnx)
+
+kernel_module=$(readlink -f $1)
+shift
+components=$*
+
+kernel_module_file_name=$(basename $kernel_module)
+kernel_module_name=${kernel_module_file_name%.ko}
+
+tool="aarch64-none-elf-ld -EL -r"
+
+$tool -o $kernel_module.o -L$mk_bin_dir $components
+(cd $(dirname $kernel_module); $linux_tree/scripts/mod/modpost $kernel_module.o)
+
+$script_dir/kernel_cc -c -o $kernel_module.mod.o $kernel_module.mod.c -DKBUILD_STR\(s\)=#s -DKBUILD_BASENAME=KBUILD_STR\(file1\) -DKBUILD_MODNAME=KBUILD_STR\($kernel_module_name\)
+
+final_link_flags="-T $linux_tree/scripts/module-common.lds --build-id"
+
+cmd="$tool $final_link_flags -o $kernel_module $kernel_module.mod.o -L$mk_bin_dir $components"
+echo $cmd > $kernel_module.cmd
+exec $cmd

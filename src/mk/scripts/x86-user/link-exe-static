@@ -1,0 +1,16 @@
+#!/bin/sh
+
+executable=$1
+shift
+components=$*
+
+tool="g++"
+
+link_opts="-nodefaultlibs -Wl,-Bsymbolic,-Bstatic,-lstdc++,-lgcc,-lgcc_eh,-Bdynamic,-lpthread,-lc"
+pic_flag=-fPIC
+
+export LD_LIBRARY_PATH=$mk_bin_dir:$LD_LIBRARY_PATH
+
+cmd="$tool -g $pic_flag -o $executable -L$mk_bin_dir $components $link_opts"
+echo $cmd > $executable.cmd
+exec $cmd

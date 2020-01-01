@@ -1,0 +1,18 @@
+#!/bin/sh
+
+executable=$1
+shift
+components=$*
+
+tool="aarch64-linux-gnu-g++"
+
+pic_flag=-fPIC
+pthread_flag=-pthread
+lpthread_flag=-lpthread
+export_all_flag=-Wl,-E
+   
+export LD_LIBRARY_PATH=$mk_bin_dir:$LD_LIBRARY_PATH
+
+cmd="$tool $export_all_flag -g $pic_flag $pthread_flag -o $executable -L$mk_bin_dir $components $lpthread_flag"
+echo $cmd > $executable.cmd
+exec $cmd

@@ -1,0 +1,34 @@
+#!/bin/sh
+
+shared_library=$1
+shift
+components=$*
+
+tool="g++"
+
+pic_flag=-fPIC
+
+cmd="$tool -shared $pic_flag -o $shared_library -L$mk_bin_dir $components"
+echo $cmd > $shared_library.cmd
+$cmd
+
+export LD_LIBRARY_PATH=$mk_bin_dir:$LD_LIBRARY_PATH
+ldd -r $shared_library > $shared_library.log 2>&1
+
+grep symbol.not.found $shared_library.log > /dev/null
+if [ $? -ne 1 ]; then
+    rm $shared_library
+    grep symbol.not.found $shared_library.log | c++filt
+    rm $shared_library.log > /dev/null
+    exit 1
+fi
+
+grep undefined.symbol $shared_library.log > /dev/null
+if [ $? -ne 1 ]; then
+    rm $shared_library
+    grep undefined.symbol $shared_library.log | c++filt
+    rm $shared_library.log > /dev/null
+    exit 1
+fi
+
+rm $shared_library.log > /dev/null

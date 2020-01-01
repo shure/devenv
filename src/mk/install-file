@@ -1,0 +1,75 @@
+#!/bin/sh
+
+mk_dir=`dirname $0`
+
+if [ "$1" = "-no-legal" ]; then
+    no_legal=$1
+    shift
+else
+    no_legal=""
+fi
+
+source=$1
+target=$2
+
+# echo "Install $no_legal $source"
+
+mkdir -p `dirname $target`
+
+source_absolute_path=`pwd`/$source
+source_extension=`echo $source | awk -F. '{print $NF}'`
+
+if [ -h $source ]; then
+    if [ -h $target ] || [ -d $target ];then 
+        mv $target $target.$$
+        rm -rf $target.$$
+    fi
+    cp -a $source $target
+
+elif [ -d $source ]; then
+
+    # case of directory, copy as is
+
+    files=`( cd $source ; find . -type f )`
+    for file in $files; do
+        $mk_dir/install-file $no_legal $source/$file $target/$file
+    done
+
+elif [ "$source_extension" = "tar" ]; then
+
+    # ensure target exists and it is empty directory
+    mkdir -p $target
+    rm -rf $target
+    mkdir -p $target
+
+    # case of tar file, expand
+    (cd $target; tar -xmf $source_absolute_path)
+
+elif [ "$source_extension" = "tgz" ]; then
+
+    # ensure target exists and it is empty directory
+    mkdir -p $target
+    rm -rf $target
+    mkdir -p $target
+
+    # case of tar file, expand
+    (cd $target; tar -xzmf $source_absolute_path)
+
+elif [ "$source_extension" = "h" ]; then
+
+    # case of include file
+    rm -f $target
+    cp $source $target
+    chmod 444 $target
+
+else
+
+    # case of regular file
+    cp -f $source $target
+    chmod 444 $target
+
+    if [ "$source_extension" = "sh" ]; then
+      chmod +x,o+x,g+x $target
+    fi
+
+fi

@@ -1,0 +1,34 @@
+#!/bin/sh
+PATH=/bin:/usr/bin
+
+PRODUCT=$1; shift
+VERSION=$1; shift
+
+TARGET=$1
+shift
+rm -f ${TARGET}
+rm -f ${TARGET}.tmp
+
+RUNTIME_SCRIPT="${0}-runtime"
+NUM_LINES=`wc -l $RUNTIME_SCRIPT | awk '{print $1}'`
+NUM_LINES=`expr $NUM_LINES + 1`
+
+cat $RUNTIME_SCRIPT | \
+sed 's+%NUM_LINES%+'$NUM_LINES'+g' | \
+sed 's+%PRODUCT%+'$PRODUCT'+g' | \
+sed 's+%VERSION%+'$VERSION'+g' | \
+sed 's/__/\ /g' > ${TARGET}
+
+CURRENT_DIR=`pwd`
+
+APPEND=
+for i in $*
+do
+    cd $i
+    find . -follow -depth \( -name '*' -o -name '.*' \) -print | cpio --quiet -ocB$APPEND -L -O ${TARGET}.tmp 1>&2
+    APPEND=A
+    cd $CURRENT_DIR
+done
+gzip -c ${TARGET}.tmp >> ${TARGET}
+rm -f ${TARGET}.tmp
+chmod a+x ${TARGET}

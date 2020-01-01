@@ -1,0 +1,28 @@
+#!/bin/sh
+
+object=$1; shift
+source=$1; shift
+
+echo "$source" | grep '^/' > /dev/null
+if [ ! $? -eq 0 ]
+then
+    source="`pwd`/$source"
+fi
+
+tool="aarch64-linux-gnu-gcc"
+
+# todo: add 64-bit porting warnings where supported
+warning_flags="-Wall -Wno-unused"
+
+if [ $mk_target = debug ] 
+then
+    flags="-g -DDEBUG"
+else
+    flags="-O2 -DNDEBUG"
+fi
+
+pic_flag=-fPIC
+
+cmd="$tool -c $pic_flag $flags -MMD -MP $warning_flags -o $object $source $*"
+echo $cmd > $object.cmd
+exec $cmd

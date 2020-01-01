@@ -1,0 +1,230 @@
+#!/bin/sh
+
+if [ "$PATH" ]
+then
+    PATH=/bin:/usr/bin:$PATH
+else
+    PATH=/bin:/usr/bin
+fi
+export PATH
+
+## Constants
+
+pwd="pwd"
+dirname="dirname"
+awk="awk"
+sed="sed"
+echo="echo"
+printf="printf"
+wc="wc"
+uname="uname"
+clear="clear"
+mkdir="mkdir"
+cat="cat"
+cpio="cpio"
+uncompress="zcat"
+
+# RUN_DIRECTORY is where we run from.
+RUN_DIRECTORY=`$pwd`
+
+# SCRIPT_DIRECTORY is where the script resides.
+cd `$dirname $0`
+SCRIPT_DIRECTORY=`$pwd`
+cd "$RUN_DIRECTORY"
+
+THIS_SCRIPT=$0
+
+candidate=
+message=
+
+NUM_LINES=%NUM_LINES%
+PRODUCT="%PRODUCT%"
+VERSION="%VERSION%"
+DEFAULTFOLDER="$HOME/$PRODUCT"
+
+# Directory where Installation will happen
+INSTALLDIR=
+
+# Expand tildas in a path.
+# $1 is a path, which may contain tildas.
+expand_tildas () {
+    $echo "$1" | \
+    $sed 's/^~\//\/home\/'$LOGNAME'\//g' | \
+    $sed 's/^~$/\/home\/'$LOGNAME'/g' | \
+    $sed 's/^~/\/home\//g'
+}
+
+read_input () {
+    response=
+    read response
+}
+
+validate_new_directory () {
+    $printf "\n   Directory %s does not exist." "$candidate"
+    $printf "\n   Would you like to create it? (y/n)"
+    read_input
+    if [ "$response" = "" ] || [ "$response" = "y" ]
+    then
+        $mkdir -p "$candidate" 2>/dev/null
+        if [ ! -d "$candidate" ]
+        then
+            message="Could not create directory \"$candidate\""
+            candidate=
+        fi
+    else
+        candidate=
+    fi
+}
+
+validate_existing_directory () {
+    $printf "\n   Directory %s already exists." "$candidate"
+    $printf "\n   Would you like to continue it? (y/n)"
+    read_input
+    if [ "$response" != "" ] && [ "$response" != "y" ]
+    then
+        candidate=
+    fi
+}
+
+validate_installation_path () {
+    if [ -f "$candidate" ]
+    then
+        message="$candidate is not a directory"
+        candidate=
+    else
+        if [ ! -d "$candidate" ]
+        then
+            validate_new_directory
+        else
+            validate_existing_directory
+        fi
+    fi
+}
+
+get_installation_path () {
+    candidate=
+    if [ "$INSTALLDIR" = "" ]
+    then
+        message="Welcome to $PRODUCT $VERSION Installation!"
+    else
+        message="The selected Installation Directory is \"$INSTALLDIR\""
+    fi
+
+    while [ "$candidate" = "" ]
+    do
+        $clear
+        $printf "\n\n   %s\n" "$message"
+        $printf "\n   %s%s\n" "In which directory do you want to install $PRODUCT" '?'
+        $printf "   Please type the directory path (e.g. %s):\n\n" "$DEFAULTFOLDER"
+
+        while [ "$candidate" = "" ]
+        do
+            $printf "  > "; read candidate
+            if [  "$candidate" = "" ]
+            then
+                $printf "   \n%s\n\n" "Please specify a corrent path:"
+            fi
+        done
+        validate_installation_path
+     done
+     cd "$candidate"
+     INSTALLDIR=`$pwd`
+     cd "$RUN_DIRECTORY"
+}
+
+print_standard_explanation () {
+    $printf "   %s\n" "To procede to the next screen, type N or just press ENTER."
+    $printf "   %s\n" "To return to the previous screen, type B."
+}
+
+print_standard_options () {
+    $printf "      N. Go to the Next screen.\n"
+    $printf "      B. Go Back.\n"
+}
+
+start_copying () {
+    while [ "" = "" ]
+    do
+        $clear
+
+        $printf "\n\n   Ready to start installing %s into the directory:\n   %s\n\n" \
+            "$PRODUCT" "$INSTALLDIR"
+        $printf "      N. Go on to copy files.\n"
+        $printf "      B. Go Back to directory selection.\n"
+
+        $printf "\n   %s\n" "To start copying files, type N or just press ENTER."
+        $printf "   %s\n" "To return to directory selection, type B."
+
+        read_input
+        if [ "$response" = "" ] || [ "$response" = "n" ] || [ "$response" = "N" ]
+        then
+            copy_files
+            return 1
+        else
+            if [ "$response" = "b" ] || [ "$response" = "B" ]
+            then
+                return 0
+            fi
+        fi
+    done
+}
+
+copy_files () {
+    echo "Extracting..."
+    tail -n +$NUM_LINES $THIS_SCRIPT | $uncompress | (cd $INSTALLDIR; cpio -cimudB 2>&1) | grep 'cpio: error'
+    $echo "Thank you for installing $PRODUCT $VERSION"
+    exit $?
+}
+
+main_loop () {
+    while [ "" = "" ]
+    do
+        get_installation_path
+        while [ "" = "" ]
+        do
+            start_copying
+            if [ $? -eq 1 ]
+            then
+                return 1
+            fi
+            break
+        done
+    done
+}
+
+ask_about_license () {
+echo "
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+IMPORTANT INFORMATION
+
+USE OF  ALL SOFTWARE  IS SUBJECT  TO LICENSE RESTRICTIONS.   CAREFULLY READ THIS
+LICENSE  AGREEMENT   BEFORE  USING THE  PRODUCTS.    USE OF  SOFTWARE  INDICATES
+CUSTOMER'S COMPLETE AND UNCONDITIONAL ACCEPTANCE OF THE TERMS AND CONDITIONS SET
+FORTH IN THIS AGREEMENT.   ANY ADDITIONAL OR  DIFFERENT PURCHASE ORDER TERMS AND
+CONDITIONS SHALL NOT APPLY.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+END-USER LICENSE AGREEMENT ("'"'"Agreement"'"'")
+
+" | /bin/more
+
+answerlicensefile=
+while true
+do
+    echo "Do you accept the license agreement? (yes/no)"
+    read answerlicensefile
+case "$answerlicensefile" in
+    "YES" | "yes" | "Yes")
+        break
+        ;;
+     "NO" | "no" | "No")
+        exit
+        ;;
+      esac    
+done
+}
+
+ask_about_license
+main_loop
