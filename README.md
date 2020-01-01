@@ -9,7 +9,7 @@ A generic build environment.
 - Multiple build flows are supported: 
     Using a native compiler,
     Using a cross compiler (a cross compiler is requited),
-    Build kernel objects (linux kernel tree is required).
+    Build kernel objects (a cross compiler and a linux kernel tree is required).
     Each flavor will store its own package tree dependencies.
 - Debug and Release build modes are supported.
 
