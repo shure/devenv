@@ -1,6 +1,6 @@
 A generic build environment.
 
-- File source tree is organized in form of packages.
+- File source tree is organized in a form of packages.
 - Each package located in its own directory.
 - Package dependecies graph is created automatically from C/C++ include directives. It is also possible to define a dependency explicitely if needed.
 - It is enforced that package dependencies is an acyclic graph.
